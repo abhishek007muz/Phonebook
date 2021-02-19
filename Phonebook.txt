@@ -1,0 +1,318 @@
+// Phonebook
+
+#include <stdio.h>
+#include <malloc.h>
+#include <string.h>
+#include <ctype.h>
+
+void addnewcontact(void);
+void viewall(void);
+void deletecontact(void);
+void modifycontact(void);
+int findcontact(void);
+int prompt(void);
+int findnum (int);
+
+typedef struct contact
+{
+		int number;
+		char name[20];
+		char phone[15];
+		char email[20];
+		char address[20];
+		struct contact *next;
+		int count;
+}Contact;
+Contact *firstc,*currentc,*newc;
+int cnum = 0;
+
+int main()
+{
+		FILE *datafile;
+		char *filename = "contactdatabase.dat";
+		char ch;
+		firstc = NULL;
+		datafile = fopen(filename,"r");
+		if(datafile)
+		{
+			firstc = (struct contact *)malloc(sizeof(struct contact));
+			currentc = firstc;
+			while(1)
+			{
+				newc = (struct contact *)malloc(sizeof(struct contact));
+				fread(currentc,sizeof(struct contact),1,datafile);
+				if(currentc->next == NULL)
+					break;
+				currentc->next = newc;
+				currentc->count = 0;
+				currentc = newc;
+			}
+			fclose(datafile);
+			cnum = currentc->number;
+		}
+		clrscr();
+		do
+		{
+				fflush(stdin);
+				puts("\n-------------------------------------------------------------------------------");
+				puts("   ** PHONEBOOK MANAGEMENT SYSTEM **");
+				puts("-------------------------------------------------------------------------------");
+				puts("\t[1] : ADD NEW CONTACT");
+				puts("\t[2] : VIEW ALL CONTACTS");
+				puts("\t[3] : SEARCH CONTACT");
+				puts("\t[4] : MODIFY CONTACT");
+				puts("\t[5] : DELETE CONTACT");
+				puts("-------------------------------------------------------------------------------");
+				puts("\t[Q] : SAVE AND QUIT");
+				puts("-------------------------------------------------------------------------------");
+				printf("\tENTER YOUR CHOICE: ");
+				ch = getchar();
+				ch = toupper(ch);
+				switch(ch)
+				{
+				case '1':
+					fflush(stdin);
+					addnewcontact();
+					break;
+				case '2':
+					viewall();
+					break;
+				case '3':
+					findcontact();
+					break;
+				case '4':
+					modifycontact();
+					break;
+				case '5':
+					deletecontact();
+					break;
+				case 'Q':
+					puts("\tSAVE AND QUIT");
+					break;
+				default:
+					break;
+				}
+		}while(ch != 'Q');
+		currentc = firstc;
+		if(currentc == NULL)
+			return(0);
+		datafile = fopen(filename,"w");
+		if(datafile == NULL)
+		{
+			printf("\tERROR WRITING TO %s",filename);
+			return(1);
+		}
+		while(currentc != NULL)
+		{
+			fwrite(currentc,sizeof(struct contact),1,datafile);
+			currentc = currentc->next;
+		}
+		fclose(datafile);
+		return(0);
+}
+
+void addnewcontact(void)
+{
+		clrscr();
+		puts("\n-------------------------------------------------------------------------------");
+		puts("\tADD NEW CONTACT");
+		puts("-------------------------------------------------------------------------------");
+		newc = (struct contact *)malloc(sizeof(struct contact));
+		if(firstc == NULL)
+				firstc = currentc = newc;
+		else
+		{
+				currentc = firstc;
+				while(currentc->next != NULL)currentc = currentc->next;
+					currentc->next = newc;
+				currentc = newc;
+		}
+		cnum++;
+		printf("%s%d\n\n","\tCONTACT SERIAL NUMBER: ",cnum);
+		currentc->number = cnum;
+		printf("%s","\tNAME   : ");
+		gets(currentc->name);
+		printf("%s","\tPHONE  : ");
+		gets(currentc->phone);
+		printf("%s","\tEMAIL  : ");
+		gets(currentc->email);
+		printf("%s","\tADDRESS: ");
+		gets(currentc->address);
+		printf("\n\tCONTACT SUCCESSFULLY ADDED..");
+		currentc->count = 0;
+		currentc->next = NULL;
+		getch();
+}
+
+void viewall(void)
+{
+		clrscr();
+		puts("\n-------------------------------------------------------------------------------");
+		puts("\tVIEW ALL CONTACTS");
+		puts("-------------------------------------------------------------------------------");
+		if(firstc == NULL)
+				puts("\tNO CONTACTS TO VIEW ALL..");
+		else
+		{
+			printf("%4s %-15s %-12s %-25s %-25s\n","S.NO.","NAME","PHONE","EMAIL","ADDRESS");
+			puts("-------------------------------------------------------------------------------");
+			currentc = firstc;
+			do
+			{
+				printf("%4d: %-15s %-12s %-25s %-25s\n",\
+				currentc->number,\
+				currentc->name,\
+				currentc->phone,\
+				currentc->email,\
+				currentc->address);
+			}while((currentc = currentc->next) != NULL);
+		}
+		getch();
+}
+
+void deletecontact(void)
+{
+		int record;
+		struct contact *previousa;
+		clrscr();
+		if(firstc == NULL)
+		{
+				puts("\tNO CONTACT TO DELETE..");
+				return;
+		}
+		viewall();
+		puts("\n-------------------------------------------------------------------------------");
+		puts("\tDELETE CONTACT");
+		puts("-------------------------------------------------------------------------------");
+		printf("\tENTER CONTACT SERIAL NUMBER TO DELETE: ");
+		scanf("%d",&record);
+		currentc = firstc;
+		while(currentc != NULL)
+		{
+				if(currentc->number == record)
+				{
+					if(currentc == firstc)
+						firstc = currentc->next;
+					else
+						previousa->next = currentc->next;
+					free(currentc);
+					printf("\n\tCONTACT SERIAL NUMBER %d DELETED..",record);
+					return;
+				}
+				else
+				{
+					previousa = currentc;
+					currentc = currentc->next;
+				}
+		}
+		printf("\n\tCONTACT SERIAL NUMBER %d NOT FOUND..",record);
+}
+
+void modifycontact(void)
+{
+		int record,result;
+		clrscr();
+		if(firstc == NULL)
+		{
+				puts("\tNO CONTACT TO MOFIFY..");
+				return;
+		}
+		viewall();
+		puts("\n-------------------------------------------------------------------------------");
+		puts("\tMODIFY CONTACT");
+		puts("-------------------------------------------------------------------------------");
+		printf("\tENTER CONTACT SERIAL NUMBER TO MODIFY: ");
+		scanf("%d",&record);
+		result = findnum(record);
+		if( result > 0 )
+		{
+			printf("\n\tCONTACT SERIAL NUMBER IS %d\n",currentc->number);
+			printf("\n\tNAME: %s\n",currentc->name);
+			if(prompt())
+				gets(currentc->name);
+			printf("\n\tPHONE: %s\n",currentc->phone);
+			if(prompt())
+				gets(currentc->phone);
+			printf("\n\tEMAIL: %s\n",currentc->email);
+			if(prompt())
+				gets(currentc->email);
+			printf("\n\tADDRESS: %s\n",currentc->address);
+			if(prompt())
+				gets(currentc->address);
+			return;
+		}
+		printf("\n\tCONTACT SERIAL NUMBER %d NOT FOUND..",record);
+		getch();
+}
+
+int findnum (int recordnum)
+{
+		int record;
+		record = recordnum;
+		currentc = firstc;
+		while(currentc != NULL)
+		{
+			 if(currentc->number == record)
+				return 1;
+			 else
+				currentc = currentc->next;
+		}
+		return -1;
+}
+
+int findcontact(void)
+{
+		char buff[20];
+		clrscr();
+		puts("\n-------------------------------------------------------------------------------");
+		puts("\tSEARCH CONTACT");
+		puts("-------------------------------------------------------------------------------");
+		if(firstc==NULL)
+		{
+				puts("\tNO CONTACTS TO VIEW ALL..");
+				return 1;
+		}
+		printf("\tENTER CONTACT NAME: ");
+		fflush(stdin);
+		gets(buff);
+		currentc = firstc;
+		while(currentc != NULL)
+		{
+			if( strcmp(currentc->name,buff) == 0 )
+			{
+				puts("-------------------------------------------------------------------------------");
+				printf("%4s %-15s %-12s %-25s %-25s\n","S.NO.","NAME","PHONE","EMAIL","ADDRESS");
+				puts("-------------------------------------------------------------------------------");
+				printf("%4d: %-15s %-12s %-25s %-25s\n",\
+				currentc->number,\
+				currentc->name,\
+				currentc->phone,\
+				currentc->email,\
+				currentc->address);
+				return 0;
+			}
+			else
+			{
+				currentc = currentc->next;
+			}
+		}
+		printf("\n\t%s IS NOT FOUND..n",buff);
+		return 1;
+}
+
+int prompt(void)
+{
+	char ch;
+	fflush(stdin);
+	printf("\tPRESS [Y] TO UPDATE OTHERWISE [N]: ");
+	ch = getchar();
+	ch = toupper(ch);
+	fflush(stdin);
+	if(ch == 'Y')
+	{
+		printf("\tENTER NEW VALUE: ");
+		return(1);
+	}
+	else
+		return(0);
+}
